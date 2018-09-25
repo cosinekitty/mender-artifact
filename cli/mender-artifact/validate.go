@@ -34,11 +34,16 @@ func validate(art io.Reader, key []byte) error {
 	// signature verification failed
 	var validationError error
 	verifiedDigitalSignature := false
+
+	// Some callers pass nil, others pass "", to indicate a missing public key.
+	isKeySpecified := (key != nil) && (len(key) > 0)
+
 	verify := func(message, sig []byte) error {
 		verifyCallback := func(message, sig []byte) error {
 			return errors.New("artifact is signed but no verification key was provided")
 		}
-		if key != nil {
+
+		if isKeySpecified {
 			s := artifact.NewVerifier(key)
 			verifyCallback = s.Verify
 		}
@@ -62,7 +67,7 @@ func validate(art io.Reader, key []byte) error {
 		Log.Debugf("error validating signature: %s", validationError.Error())
 		return ErrInvalidSignature
 	}
-	if key != nil && !verifiedDigitalSignature {
+	if isKeySpecified && !verifiedDigitalSignature {
 		Log.Debug("key was specified but no digital signature was found")
 		return ErrInvalidSignature
 	}
